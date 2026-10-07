@@ -1,0 +1,44 @@
+name: Enterprise Security & Compliance Scanner
+
+on:
+  pull_request:
+    types: [labeled] # Milestone complete hone par hi chalega (Budget-friendly)
+
+jobs:
+  enterprise-security-suite:
+    if: ${{ github.event.label.name == 'milestone-complete' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Poori history check karne ke liye
+
+      # 1. SECRET SCANNING (Hardcoded keys & passwords dhoondna)
+      - name: Run Trivy Secret & Vulnerability Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'json'
+          output: 'trivy-report.json'
+          severity: 'HIGH,CRITICAL' # Sirf khatarnak issues par focus
+
+      # 2. DEEP CODE SAST SCANNING (Semgrep)
+      - name: Run Semgrep Enterprise Code Scan
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: auto
+          generate-sarif: true
+          output: semgrep-report.sarif
+
+      # 3. AUDIT REPORT STORAGE (Enterprise Compliance Artifacts)
+      - name: Upload Security Audit Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-security-audit-logs
+          path: |
+            trivy-report.json
+            semgrep-report.sarif
+          retention-days: 30
